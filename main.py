@@ -1,6 +1,6 @@
 import sys
 import db
-from winotify import Notification
+from winotify import Notification, audio
 
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import (
@@ -49,7 +49,9 @@ class Window(FramelessWindow):
             self.ListWidget.itemSelectionChanged.connect(self.list_on_click)
 
     def show_notification(self, todo):
-        Notification(title=todo[1], msg=todo[3], app_id="pengingat tugas").show()
+        toast = Notification(title="Kerjakan tugas", msg=todo[1], app_id="Pencatat Tugas")
+        toast.set_audio(audio.Default, loop=False)
+        toast.show()
         self.refresh_list()
 
     def show_flyout(self, target):
@@ -159,6 +161,7 @@ class Window(FramelessWindow):
         else:
             self.edit_date_picker.setDate(QDate())
             self.edit_time_picker.setTime(QTime(0, 0))
+
         note = todo[3]
         self.edit_note.setPlainText(note)
 
@@ -185,7 +188,7 @@ class Window(FramelessWindow):
             )
             if self.show_dialog(todo=db.get_one_todo(todo_id), type="edit"):
                 new_title = self.edit_title.text()
-                date = self.edit_date_picker.getDate().toString("yyyy-MM-dd")
+                date = self.edit_date_picker.getDate().toString("dd-MM-yyyy")
                 time = self.edit_time_picker.getTime().toString("HH:mm:ss")
                 date_time = date + " " + time
                 note = self.edit_note.toPlainText()
