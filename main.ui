@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>914</width>
-    <height>495</height>
+    <height>491</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -315,12 +315,9 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QLabel" name="label_3">
-           <property name="layoutDirection">
-            <enum>Qt::LeftToRight</enum>
-           </property>
+          <widget class="CaptionLabel" name="lbl_created_date">
            <property name="text">
-            <string>Dibuat pada 24 Oktober 2023</string>
+            <string>Dibuat pada</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
@@ -371,6 +368,11 @@
   <customwidget>
    <class>TimePicker</class>
    <extends>QPushButton</extends>
+   <header>qfluentwidgets</header>
+  </customwidget>
+  <customwidget>
+   <class>CaptionLabel</class>
+   <extends>QLabel</extends>
    <header>qfluentwidgets</header>
   </customwidget>
   <customwidget>

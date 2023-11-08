@@ -8,8 +8,8 @@ db = dbconfig.cursor(buffered=True)
 table = "todo_item"
 
 
-def add_todo(title, date_time):
-    q = f"INSERT INTO {table} (title, reminder_date) VALUES ('{title}', '{date_time}')"
+def add_todo(title, date_time, created_date):
+    q = f"INSERT INTO {table} (title, reminder_date, created_date) VALUES ('{title}', '{date_time}', '{created_date}')"
     print(q)
     db.execute(q)
     print(f"CREATED {title}")

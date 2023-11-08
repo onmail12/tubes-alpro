@@ -112,7 +112,7 @@ class Window(FramelessWindow):
         # add data from db
         for todo in todos:
             list_widget_item = QtWidgets.QListWidgetItem()
-            todo_widget = self.create_todo(todo[0], todo[1], todo[2], todo[3])
+            todo_widget = self.create_todo(todo[0], todo[1], todo[2], todo[3], todo[4])
             list_widget_item.setSizeHint(todo_widget.sizeHint())
             self.ListWidget.addItem(list_widget_item)
             self.ListWidget.setItemWidget(list_widget_item, todo_widget)
@@ -152,15 +152,13 @@ class Window(FramelessWindow):
         title = todo[1]
         self.edit_title.setText(title)
 
-        # pass setdate and settime if empty
-        try:
+        if todo[2]:
             date, time = utils.date_time_formatter_fromdb(todo)
-        except IndexError:
-            self.edit_date_picker.setDate(QDate())
-            self.edit_time_picker.setTime(QTime(0, 0))
-        else:
             self.edit_date_picker.setDate(date)
             self.edit_time_picker.setTime(time)
+        else:
+            self.edit_date_picker.setDate(QDate())
+            self.edit_time_picker.setTime(QTime(0, 0))
         note = todo[3]
         self.edit_note.setPlainText(note)
 
@@ -195,11 +193,11 @@ class Window(FramelessWindow):
                 self.refresh_list()
             self.edit_title.setText("")
 
-    def printd(self, id):
+    def complete_task(self, id):
         db.delete_todo(id)
         self.refresh_list()
 
-    def create_todo(self, id, title, date_time=None, note=None):
+    def create_todo(self, id, title, date_time=None, note=None, created_date=None):
         self.todo_item = QWidget()
         self.todo_item.setObjectName("todo_item")
         self.todo_item.setAutoFillBackground(False)
@@ -209,7 +207,7 @@ class Window(FramelessWindow):
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.radio_todo_item = RadioButton(self.todo_item)
 
-        self.radio_todo_item.toggled.connect(lambda: self.printd(id))
+        self.radio_todo_item.toggled.connect(lambda: self.complete_task(id))
 
         self.radio_todo_item.setObjectName("radio_todo_item")
         self.horizontalLayout.addWidget(self.radio_todo_item)
@@ -239,13 +237,14 @@ class Window(FramelessWindow):
         if date_time:
             self.verticalLayout_7.addWidget(self.date_todo_item)
 
-        self.horizontalLayout.addWidget(self.widget_todo_item_detail)
+        self.lbl_created_date.setText(f"Dibuat pada {created_date}")
 
+        self.horizontalLayout.addWidget(self.widget_todo_item_detail)
         self.hspace_todo_item = QSpacerItem(
             40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
-
         self.horizontalLayout.addItem(self.hspace_todo_item)
+
         # self.icon_note = IconWidget(self.todo_item).setFixedSize(12,12)
         # self.icon_note.setIcon(FluentIcon.QUICK_NOTE)
         # self.horizontalLayout.addWidget(self.icon_note)
@@ -269,7 +268,9 @@ class AddTodo(AcrylicWindow):
         self.title = self.add_title.text()
         self.date_time = self.date + " " + self.time
         if not self.title == "":
-            db.add_todo(self.title, self.date_time)
+            db.add_todo(
+                self.title, self.date_time, QDate.currentDate().toString("yyyy-MM-dd")
+            )
             self.close()
             self.main_window.refresh_list()
 
