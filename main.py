@@ -10,9 +10,10 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QSizePolicy,
+    QGraphicsDropShadowEffect,
 )
-from PyQt6.QtCore import QTime, QTimer, QDate, Qt
-from PyQt6.QtGui import QFont, QPixmap
+from PyQt6.QtCore import QTime, QTimer, QDate
+from PyQt6.QtGui import QFont
 from PyQt6.uic.load_ui import loadUi
 from qfluentwidgets import (
     RadioButton,
@@ -21,6 +22,7 @@ from qfluentwidgets import (
     BodyLabel,
     Flyout,
     MessageBox,
+    
 )
 from qframelesswindow import AcrylicWindow, FramelessWindow
 import utils
@@ -34,22 +36,30 @@ class Window(FramelessWindow):
         self.setWindowIcon(FluentIcon.APPLICATION.icon())
         setThemeColor("#00A4EF")
 
-        # ui setup
+        # setup ui
         self.refresh_list()
+        effect = QGraphicsDropShadowEffect()
+        effect.setOffset(0, 0)
+        effect.setBlurRadius(10)
+        # self.widget_left.setStyleSheet(
+        #     "QWidget#widget_left {background-image:url(bg.png)}"
+        # )
 
-        # set icons
-        # self.btn_add_todo_item.setIcon(FluentIcon.ADD)
+        self.widget_right.setGraphicsEffect(effect)
+
         self.btn_delete.setIcon(FluentIcon.DELETE)
 
         # SET BUTTONS
         self.PrimaryPushButton.clicked.connect(self.create_add_todo)
         self.btn_confirm_edit.clicked.connect(self.edit_todo)
         self.btn_delete.clicked.connect(self.delete_todo)
-        if self.ListWidget.count() > 0:
-            self.ListWidget.itemSelectionChanged.connect(self.list_on_click)
+        # self.ListWidget.itemSelectionChanged.connect(self.list_on_click)
+        self.ListWidget.itemClicked.connect(self.list_on_click)
 
     def show_notification(self, todo):
-        toast = Notification(title="Kerjakan tugas", msg=todo[1], app_id="Pencatat Tugas")
+        toast = Notification(
+            title="Kerjakan tugas", msg=todo[1], app_id="Pencatat Tugas"
+        )
         toast.set_audio(audio.Default, loop=False)
         toast.show()
         self.refresh_list()
@@ -100,19 +110,13 @@ class Window(FramelessWindow):
         self.add_todo.show()
         self.refresh_list()
 
-    def empty_info(self):
-        self.edit_title.setText("")
-        self.edit_date_picker.setDate(QDate.currentDate())
-        self.edit_time_picker.setTime(QTime.currentTime())
-        self.edit_note.setPlainText("")
-
     def refresh_list(self):
         # remove all present todo item
         current_scroll_position = self.ListWidget.verticalScrollBar().value()
         self.ListWidget.clear()
-        todos = db.get_all_todo()
+        todos_folder = db.get_all_todo()
         # add data from db
-        for todo in todos:
+        for todo in todos_folder:
             list_widget_item = QtWidgets.QListWidgetItem()
             todo_widget = self.create_todo(todo[0], todo[1], todo[2], todo[3], todo[4])
             list_widget_item.setSizeHint(todo_widget.sizeHint())
@@ -120,6 +124,7 @@ class Window(FramelessWindow):
             self.ListWidget.setItemWidget(list_widget_item, todo_widget)
 
         # notification handler
+        todos = db.get_all_todo()
         for todo in todos:
             if (
                 todo[2]
@@ -137,33 +142,37 @@ class Window(FramelessWindow):
                     self.notification_timer.setSingleShot(True)
                     break
 
-        self.empty_info()
         self.badge_count.setText(str(self.ListWidget.count()))
 
         # set scroll to prev scroll pos
+        self.clear_list_widget_selection()
         self.ListWidget.verticalScrollBar().setValue(current_scroll_position)
-        self.ListWidget.clearSelection()
+
+    def clear_list_widget_selection(self):
+        for i in range(self.ListWidget.count()):
+            self.ListWidget.item(i).setSelected(False)
+
 
     def list_on_click(self):
-        todo_id = self.ListWidget.itemWidget(
-            self.ListWidget.item(self.ListWidget.currentRow())
-        ).property("id")
+        if self.ListWidget.count() > 1:
+            todo_id = self.ListWidget.itemWidget(
+                self.ListWidget.item(self.ListWidget.currentRow())
+            ).property("id")
+            todo = db.get_one_todo(todo_id)
+            print(todo)
+            title = todo[1]
+            self.edit_title.setText(title)
 
-        todo = db.get_one_todo(todo_id)
-        print(todo)
-        title = todo[1]
-        self.edit_title.setText(title)
+            if todo[2]:
+                date, time = utils.date_time_formatter_fromdb(todo)
+                self.edit_date_picker.setDate(date)
+                self.edit_time_picker.setTime(time)
+            else:
+                self.edit_date_picker.setDate(QDate())
+                self.edit_time_picker.setTime(QTime(0, 0))
 
-        if todo[2]:
-            date, time = utils.date_time_formatter_fromdb(todo)
-            self.edit_date_picker.setDate(date)
-            self.edit_time_picker.setTime(time)
-        else:
-            self.edit_date_picker.setDate(QDate())
-            self.edit_time_picker.setTime(QTime(0, 0))
-
-        note = todo[3]
-        self.edit_note.setPlainText(note)
+            note = todo[3]
+            self.edit_note.setPlainText(note)
 
     def delete_todo(self):
         todo = self.ListWidget.currentRow()
@@ -176,7 +185,7 @@ class Window(FramelessWindow):
             if self.show_dialog(todo=db.get_one_todo(todo_id), type="delete"):
                 db.delete_todo(todo_id)
                 self.ListWidget.takeItem(todo)
-                self.refresh_list()
+                # self.refresh_list()
 
     def edit_todo(self):
         todo = self.ListWidget.currentRow()
@@ -188,13 +197,12 @@ class Window(FramelessWindow):
             )
             if self.show_dialog(todo=db.get_one_todo(todo_id), type="edit"):
                 new_title = self.edit_title.text()
-                date = self.edit_date_picker.getDate().toString("dd-MM-yyyy")
+                date = self.edit_date_picker.getDate().toString("yyyy-MM-dd")
                 time = self.edit_time_picker.getTime().toString("HH:mm:ss")
                 date_time = date + " " + time
                 note = self.edit_note.toPlainText()
                 db.edit_todo(todo_id, new_title, date_time, note)
                 self.refresh_list()
-            self.edit_title.setText("")
 
     def complete_task(self, id):
         db.delete_todo(id)
@@ -203,8 +211,6 @@ class Window(FramelessWindow):
     def create_todo(self, id, title, date_time=None, note=None, created_date=None):
         self.todo_item = QWidget()
         self.todo_item.setObjectName("todo_item")
-        self.todo_item.setAutoFillBackground(False)
-        # self.todo_item.setStyleSheet('background: "#e0e0e0"\n' "")
         self.horizontalLayout = QHBoxLayout(self.todo_item)
         self.horizontalLayout.setSpacing(16)
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -225,20 +231,35 @@ class Window(FramelessWindow):
         font = QFont()
         font.setPointSize(12)
         self.title_todo_item.setFont(font)
-
         self.verticalLayout_7.addWidget(self.title_todo_item)
+        self.horizontal_date_time = QHBoxLayout()
 
         date = QDate.fromString(str(date_time).split()[0], "yyyy-MM-dd")
+        time = QTime.fromString(str(date_time).split()[1], "HH:mm:ss")
+        
         self.date_todo_item = BodyLabel(
-            date.toString("dddd, d MMMM"), self.widget_todo_item_detail
+            f"{date.toString("dddd, d MMMM")} {time.toString("HH:mm")}", self.widget_todo_item_detail
         )
+        self.lbl_icon_date_todo_item = BodyLabel()
+        if note:
+            self.lbl_icon_date_todo_item.setPixmap(FluentIcon.PASTE.icon().pixmap(12,12))
+        self.horizontal_date_time.addWidget(self.date_todo_item)
+        self.horizontal_date_time.addWidget(self.lbl_icon_date_todo_item)
+        self.horizontal_date_time.setSpacing(16)
+
+        if date < QDate.currentDate():
+            self.date_todo_item.setStyleSheet("color: #f85c44")
+        elif date == QDate.currentDate() and time < QTime.currentTime():
+            self.date_todo_item.setStyleSheet("color: #f85c44")
+        else:
+            self.date_todo_item.setStyleSheet("color: #696969")
+
         font1 = QFont()
         font1.setPointSize(8)
         self.date_todo_item.setFont(font1)
-        self.date_todo_item.setStyleSheet("color: #696969")
 
         if date_time:
-            self.verticalLayout_7.addWidget(self.date_todo_item)
+            self.verticalLayout_7.addLayout(self.horizontal_date_time)
 
         self.lbl_created_date.setText(f"Dibuat pada {created_date}")
 
