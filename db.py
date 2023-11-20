@@ -27,8 +27,8 @@ def get_one_todo(id):
     return db.fetchone()
 
 
-def add_todo(title, date_time, created_date):
-    q = f"INSERT INTO {table} (title, reminder_date, created_date) VALUES ('{title}', '{date_time}', '{created_date}')"
+def add_todo(title, date_time, created_date, note):
+    q = f"INSERT INTO {table} (title, reminder_date, created_date, note) VALUES ('{title}', '{date_time}', '{created_date}', '{note}')"
     print(q)
     db.execute(q)
     print(f"CREATED {title}")

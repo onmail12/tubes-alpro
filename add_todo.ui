@@ -162,7 +162,7 @@
        </widget>
       </item>
       <item>
-       <widget class="PlainTextEdit" name="PlainTextEdit"/>
+       <widget class="PlainTextEdit" name="add_note"/>
       </item>
      </layout>
     </widget>

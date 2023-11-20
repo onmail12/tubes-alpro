@@ -22,7 +22,6 @@ from qfluentwidgets import (
     BodyLabel,
     Flyout,
     MessageBox,
-    
 )
 from qframelesswindow import AcrylicWindow, FramelessWindow
 import utils
@@ -114,10 +113,11 @@ class Window(FramelessWindow):
         # remove all present todo item
         current_scroll_position = self.ListWidget.verticalScrollBar().value()
         self.ListWidget.clear()
-        todos_folder = db.get_all_todo()
+        todos = db.get_all_todo()
         # add data from db
-        for todo in todos_folder:
+        for todo in todos:
             list_widget_item = QtWidgets.QListWidgetItem()
+            print(todo)
             todo_widget = self.create_todo(todo[0], todo[1], todo[2], todo[3], todo[4])
             list_widget_item.setSizeHint(todo_widget.sizeHint())
             self.ListWidget.addItem(list_widget_item)
@@ -151,7 +151,6 @@ class Window(FramelessWindow):
     def clear_list_widget_selection(self):
         for i in range(self.ListWidget.count()):
             self.ListWidget.item(i).setSelected(False)
-
 
     def list_on_click(self):
         if self.ListWidget.count() > 1:
@@ -234,45 +233,48 @@ class Window(FramelessWindow):
         self.verticalLayout_7.addWidget(self.title_todo_item)
         self.horizontal_date_time = QHBoxLayout()
 
-        date = QDate.fromString(str(date_time).split()[0], "yyyy-MM-dd")
-        time = QTime.fromString(str(date_time).split()[1], "HH:mm:ss")
-        
-        self.date_todo_item = BodyLabel(
-            f"{date.toString("dddd, d MMMM")} {time.toString("HH:mm")}", self.widget_todo_item_detail
-        )
-        self.lbl_icon_date_todo_item = BodyLabel()
+        if date_time:
+            date = QDate.fromString(str(date_time).split()[0], "yyyy-MM-dd")
+            time = QTime.fromString(str(date_time).split()[1], "HH:mm:ss")
+
+            self.date_todo_item = BodyLabel(
+                f"{date.toString('dddd, d MMMM')} {time.toString('HH:mm')}",
+                self.widget_todo_item_detail,
+            )
+            self.horizontal_date_time.addWidget(self.date_todo_item)
+            self.horizontal_date_time.setSpacing(16)
+
+            if date < QDate.currentDate():
+                self.date_todo_item.setStyleSheet("color: #f85c44")
+            elif date == QDate.currentDate() and time < QTime.currentTime():
+                self.date_todo_item.setStyleSheet("color: #f85c44")
+            else:
+                self.date_todo_item.setStyleSheet("color: #696969")
+
+            font1 = QFont()
+            font1.setPointSize(8)
+            self.date_todo_item.setFont(font1)
+
         if note:
-            self.lbl_icon_date_todo_item.setPixmap(FluentIcon.PASTE.icon().pixmap(12,12))
-        self.horizontal_date_time.addWidget(self.date_todo_item)
-        self.horizontal_date_time.addWidget(self.lbl_icon_date_todo_item)
-        self.horizontal_date_time.setSpacing(16)
-
-        if date < QDate.currentDate():
-            self.date_todo_item.setStyleSheet("color: #f85c44")
-        elif date == QDate.currentDate() and time < QTime.currentTime():
-            self.date_todo_item.setStyleSheet("color: #f85c44")
-        else:
-            self.date_todo_item.setStyleSheet("color: #696969")
-
-        font1 = QFont()
-        font1.setPointSize(8)
-        self.date_todo_item.setFont(font1)
+            self.lbl_icon_note_item = BodyLabel()
+            self.lbl_icon_note_item.setPixmap(FluentIcon.PASTE.icon().pixmap(12, 12))
+            self.horizontal_date_time.addWidget(self.lbl_icon_note_item)
 
         if date_time:
-            self.verticalLayout_7.addLayout(self.horizontal_date_time)
+            self.lbl_icon_date_todo_item = BodyLabel()
+            self.lbl_icon_date_todo_item.setPixmap(
+                FluentIcon.DATE_TIME.icon().pixmap(12, 12)
+            )
+            self.horizontal_date_time.addWidget(self.lbl_icon_date_todo_item)
+
+        self.verticalLayout_7.addLayout(self.horizontal_date_time)
 
         self.lbl_created_date.setText(f"Dibuat pada {created_date}")
-
         self.horizontalLayout.addWidget(self.widget_todo_item_detail)
         self.hspace_todo_item = QSpacerItem(
             40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
         self.horizontalLayout.addItem(self.hspace_todo_item)
-
-        # self.icon_note = IconWidget(self.todo_item).setFixedSize(12,12)
-        # self.icon_note.setIcon(FluentIcon.QUICK_NOTE)
-        # self.horizontalLayout.addWidget(self.icon_note)
-
         self.todo_item.setProperty("id", id)
 
         return self.todo_item
@@ -286,14 +288,16 @@ class AddTodo(AcrylicWindow):
         self.btn_confirm_add.clicked.connect(self.add_todo)
 
     def add_todo(self):
-        self.date = self.add_date_picker.getDate().toString("yyyy-MM-dd")
-        self.time = self.add_time_picker.getTime().toString("HH:mm:ss")
+        date = self.add_date_picker.getDate().toString("yyyy-MM-dd")
+        time = self.add_time_picker.getTime().toString("HH:mm:ss")
 
-        self.title = self.add_title.text()
-        self.date_time = self.date + " " + self.time
-        if not self.title == "":
+        title = self.add_title.text()
+        date_time = date + " " + time
+        note = self.add_note.toPlainText()
+
+        if not title == "":
             db.add_todo(
-                self.title, self.date_time, QDate.currentDate().toString("yyyy-MM-dd")
+                title, date_time, QDate.currentDate().toString("yyyy-MM-dd"), note
             )
             self.close()
             self.main_window.refresh_list()
